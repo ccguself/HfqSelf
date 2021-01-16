@@ -3,18 +3,62 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import datetime
+from joblib import Parallel, delayed
 
 
-class SingleLog:
-    def __init__(self, raw_signal, data_market):
+class Log:
+    def __init__(self, path, datetime_start, datetime_end):
+        self.path = path
+        self.datetime_start = datetime_start
+        self.datetime_end = datetime_end
+        self._fetch_data()
+
+    def _fetch_data(self):
+        self.df = pd.read_sql(self.path)
+
+
+class SignalLog(Log):
+    def __init__(self, path, datetime_start, datetime_end):
+        super().__init__(path, datetime_start, datetime_end)
+        self.path = path
+        self.datetime_start = datetime_start
+        self.datetime_end = datetime_end
+
+    def process_df_signal(self):
+        return self.df
+
+
+class MarketLog(Log):
+    def __init__(self, path, datetime_start, datetime_end):
+        super().__init__(path, datetime_start, datetime_end)
+        self.path = path
+        self.datetime_start = datetime_start
+        self.datetime_end = datetime_end
+
+    def process_df_market(self):
+        return self.df
+
+
+class TradeLog:
+    def __init__(self, path, datetime_start, datetime_end):
+        super().__init__(path, datetime_start, datetime_end)
+        self.path = path
+        self.datetime_start = datetime_start
+        self.datetime_end = datetime_end
+
+
+class SingleCombinedRecord:
+    def __init__(self, signal_id, log_signal_all, log_market_all):
         """
 
         Args:
             raw_signal (pd.Series): e.g. {'datetime', 'direction': 'long', 'limit_1': 3707.0, 'stop': 3697.0, 'limit_2': 3710.0, 'num:': 1, 'duration_min': 3, 'cancel_second': 60}
-            df_market (pd.DataFrame): 全部（当天）的行情信息
+            df_market (pd.DataFrame): MarketLog
         """
-        self.raw_signal = raw_signal
-        self.data_market = data_market
+        self.signal_id = signal_id
+        self.log_signal_all = log_signal_all
+        self.log_market_all = log_market_all
+        self.raw_signal = log_signal_all.df[signal_id]
         self._get_interval_market()
         self._check_signal()
 
@@ -28,8 +72,8 @@ class SingleLog:
         datetime_end = datetime_begin + datetime.timedelta(
             minutes=self.raw_signal["duration_min"]
         )
-        self.interval_market = self.data_market.loc[datetime_begin:datetime_end, :]
-        return self.interval_market
+        self.market_df_all = self.log_market_all.process_df_market()
+        self.market_df_interval = self.market_df_all.loc[datetime_begin:datetime_end, :]
 
     def _check_signal(self):
         """判断信号的对错
@@ -37,43 +81,56 @@ class SingleLog:
         Returns:
             pd.DataFrame: 信号对错判断True/False
         """
-
-        return
-
-
-class SignalLog:
-    def __init__(self, path, datetime_start, datetime_end):
-        self.path = path
-        self.datetime_start = datetime_start
-        self.datetime_end = datetime_end
-
-    def fetch_data_signal(self):
-        self.df_signal = pd.read_sql(self.path)
-        self.df_signal_processed = self.process_df_signal(self.df_signal)
-        return self.df_signal
-
-    @staticmethod
-    def process_df_signal(df):
-        return df
-
-
-class MarketLog:
-    def __init__(self, path, datetime_start, datetime_end):
-        self.path = path
-        self.datetime_start = datetime_start
-        self.datetime_end = datetime_end
-
-    def fetch_data_market(self):
-        self.df_market = pd.read_sql(self.path)
-        self.df_market_processed = self.process_df_market(self.df_market)
-        return self.df_market_processed
-
-    @staticmethod
-    def process_df_market(df):
-        return df
+        self.interval_max = self.market_df_interval["last_price"].max()
+        self.interval_min = self.market_df_interval["last_price"].min()
+        if self.raw_signal["direction"] == "long":
+            if self.raw_signal["limit_2"] <= self.interval_max:
+                self.correct = True
+            else:
+                self.correct = False
+        elif self.raw_signal["direction"] == "short":
+            if self.raw_signal["limit_2"] >= self.interval_min:
+                self.correct = True
+            else:
+                self.correct = False
 
 
 class AnalysisLog:
-    def __init__(self, data_market: MarketLog, date_signal: SignalLog):
-        self.data_market = data_market
-        self.data_signal = date_signal
+    """需要分析的内容包括（使用joblib，同时分析多个信号）：
+
+    1. 信号个数统计
+    2. 正确信号个数统计
+    3. 市场行情中，所有满足条件的时点（3.1 实验所有tick；3.2 实验路径依赖性）
+    4.
+
+    """
+
+    def __init__(
+        self,
+        log_market_all: MarketLog,
+        log_signal_all: SignalLog,
+        log_trade_all: TradeLog,
+    ):
+        self.log_market_all = log_market_all
+        self.log_signal_all = log_signal_all
+        self.log_trade_all = log_trade_all
+
+    def count_signal(self):
+        self.num_signal = self.log_signal_all.df.shape[0]
+        return self.num_signal
+
+    def count_signal_right(self, n_job):
+        signal_right_lst = Parallel(n_jobs=n_job)(
+            delayed(self.count_signal_utils)(
+                signal_id, self.log_signal_all, self.log_market_all
+            )
+            for signal_id in self.log_signal_all.index.values()
+        )
+        self.num_signal_right = sum(signal_right_lst)
+        return self.num_signal_right
+
+    @staticmethod
+    def count_signal_utils(signal_id, signal_all, market_all):
+        """判断单个信号的正误"""
+        single_combined_log = SingleCombinedRecord(signal_id, signal_all, market_all)
+        return single_combined_log.correct
