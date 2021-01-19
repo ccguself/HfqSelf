@@ -5,25 +5,25 @@ from random import randint, shuffle
 from datetime import datetime
 import numpy as np
 import time
-from data import data_stct
-from config import *
-import forecast
+from prophet.data import data_stct
+from prophet.config import *
+from prophet import forecast
 
 
 class prediction:
     def __init__(self):
         self.model_rzbl = forecast.forecastNet(
             args_rzbl,
-            save_file=r"./fcn_64d_s_6dim_3prd_rzbl_sig.pt",
+            save_file=r"D:\Code\hfq\HfqSelf\prophet\fcn_64d_s_6dim_3prd_rzbl_sig.pt",
         )
         self.model_cu = forecast.forecastNet(
             args_cu,
-            save_file=r"./fcn_128d_s_5dim_3prd_cu.pt",
+            save_file=r"D:\Code\hfq\HfqSelf\prophet\fcn_128d_s_5dim_3prd_cu.pt",
         )
         if args_rzbl.is_tick:
             self.model_rzbl = forecast.forecastNet(
                 args_rzbl,
-                save_file=r"./fcn_64d_s_9dim_3prd_05.pt",
+                save_file=r"D:\Code\hfq\HfqSelf\prophet\fcn_64d_s_9dim_3prd_05.pt",
             )
         self.sigmoid = lambda x: 1 / (1 + np.exp(-x / 5))
         self.dirct = ["long", "short"]

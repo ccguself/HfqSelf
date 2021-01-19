@@ -1,4 +1,4 @@
-from model import FCN, FCN_1
+from prophet.model import FCN, FCN_1
 import time
 import numpy as np
 import torch
