@@ -6,20 +6,23 @@ import datetime
 from joblib import Parallel, delayed
 from peewee import *
 
+from prophet.predict import signal_output
+
 
 class SingleCombinedLog:
-    def __init__(self, df_market_interval):
-        self.df_market_interval = df_market_interval
-
-
-
-
-
-
+    def __init__(self, raw_signal, df_predict_interval):
+        self.raw_signal = raw_signal
+        self.df_predict_interval = df_predict_interval
 
 
 class MarketLog:
-    def __init__(self, db_path, datetime_start, datetime_end, symbol):
+    def __init__(
+        self,
+        db_path="D:\Trader\.vntrader\database.db",
+        datetime_start="2021-01-17",
+        datetime_end="2021-01-18",
+        symbol="rb2105",
+    ):
         self.db_path = db_path
         self.datetime_start = datetime_start
         self.datetime_end = datetime_end
@@ -47,21 +50,47 @@ class MarketLog:
             "ask_volume_1",
         ]
         self.df_market = self.df_market[keep_columns]
-        self.df_market["datetime"] = self.df_market["datetime"].apply(
-            lambda x: x.timestamp()
-        )
+        # self.df_market["datetime"] = self.df_market["datetime"].apply(
+        #     lambda x: x.timestamp()
+        # )
         return self.df_market
 
 
 class AnalysisLog:
-    def __init__(self, total_market_log:MarketLog, start_interval=2000):
+    def __init__(
+        self, total_market_log: MarketLog, pre_start_interval=2000, frequency_predict=20
+    ):
         self.total_market_log = total_market_log
-        self.start_interval = start_interval
+        self.pre_start_interval = pre_start_interval  # 模型预启动需要使用的tick数量
+        self.frequency_predict = frequency_predict
         self.dict_long = {}  # datetime: SingleCombinedLog
         self.dict_short = {}  # datetime: SingleCombinedLog
-    
+        self.model = signal_output()
+
     def generate_single_combined_log(self):
-        
-
-
-
+        # 逐tick数据滑动，生成信号
+        df_market_total = self.total_market_log.df_market
+        for i, timestamp_beging in enumerate(df_market_total["datetime"]):
+            # 判断多空信号
+            if (i > self.pre_start_interval) & ((i % self.frequency_predict) == 0):
+                train_df = df_market_total.iloc[i - self.pre_start_interval : i, :]
+                train_df["datetime"] = train_df["datetime"].apply(
+                    lambda x: x.timestamp()
+                )
+                raw_signals = self.model.get_output_list(train_df.values)
+                for j, signal in enumerate(raw_signals):
+                    timestamp_end = timestamp_beging + datetime.timedelta(
+                        minutes=signal["duration_min"]
+                    )
+                    df_predict = df_market_total.loc[
+                        (df_market_total["datetime"] > timestamp_beging)
+                        & (df_market_total["datetime"] < timestamp_end)
+                    ]
+                    if signal["direction"] == "long":
+                        self.dict_long[timestamp_beging] = SingleCombinedLog(
+                            signal, df_predict
+                        )
+                    elif signal["direction"] == "short":
+                        self.dict_short[timestamp_beging] = SingleCombinedLog(
+                            signal, df_predict
+                        )
