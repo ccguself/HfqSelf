@@ -13,6 +13,28 @@ class SingleCombinedLog:
     def __init__(self, raw_signal, df_predict_interval):
         self.raw_signal = raw_signal
         self.df_predict_interval = df_predict_interval
+        self.strategy_name = "Parent"
+        self.direction = "Parent"
+        self.duration_minute = "Parent"
+
+    def _check_signal(self):
+        pass
+
+
+class NNLongTwoLog(SingleCombinedLog):
+    def __init__(self, raw_signal, df_predict_interval):
+        super().__init__(raw_signal, df_predict_interval)
+        self.strategy_name = "NN"
+        self.direction = "Long"
+        self.duration_minute = "Two"
+
+
+class NNShortTwoLog(SingleCombinedLog):
+    def __init__(self, raw_signal, df_predict_interval):
+        super().__init__(raw_signal, df_predict_interval)
+        self.strategy_name = "NN"
+        self.direction = "Short"
+        self.duration_minute = "Two"
 
 
 class MarketLog:
@@ -57,14 +79,18 @@ class MarketLog:
 
 
 class AnalysisLog:
+    """一些注意点：
+    1. dict_...会分别记录各个类型的信号，不同模型发出的，不同有效时段的，不同方向的
+    """
+
     def __init__(
         self, total_market_log: MarketLog, pre_start_interval=2000, frequency_predict=20
     ):
         self.total_market_log = total_market_log
         self.pre_start_interval = pre_start_interval  # 模型预启动需要使用的tick数量
         self.frequency_predict = frequency_predict
-        self.dict_long = {}  # datetime: SingleCombinedLog
-        self.dict_short = {}  # datetime: SingleCombinedLog
+        self.dict_nn_long_two = {}  # datetime: SingleCombinedLog
+        self.dict_nn_short_two = {}  # datetime: SingleCombinedLog
         self.model = signal_output()
 
     def generate_single_combined_log(self):
@@ -78,19 +104,44 @@ class AnalysisLog:
                     lambda x: x.timestamp()
                 )
                 raw_signals = self.model.get_output_list(train_df.values)
-                for j, signal in enumerate(raw_signals):
-                    timestamp_end = timestamp_beging + datetime.timedelta(
-                        minutes=signal["duration_min"]
+
+                # 拆分信号
+                lst_signal_nn_long_two = [
+                    x
+                    for x in raw_signals
+                    if ((x["direction"] == "long") & (x["duration_min"] == 2))
+                ]
+                lst_signal_nn_short_two = [
+                    x
+                    for x in raw_signals
+                    if ((x["direction"] == "short") & (x["duration_min"] == 2))
+                ]
+
+                # 更新dict
+                timestamp_end = timestamp_beging + datetime.timedelta(minutes=2)
+                df_predict = df_market_total.loc[
+                    (df_market_total["datetime"] > timestamp_beging)
+                    & (df_market_total["datetime"] < timestamp_end)
+                ]
+
+                ## 2分钟的信号
+                # lst_signal_nn_long_two
+                if len(lst_signal_nn_long_two) == 0:
+                    self.dict_nn_long_two[timestamp_beging] = NNLongTwoLog(
+                        None, df_predict
                     )
-                    df_predict = df_market_total.loc[
-                        (df_market_total["datetime"] > timestamp_beging)
-                        & (df_market_total["datetime"] < timestamp_end)
-                    ]
-                    if signal["direction"] == "long":
-                        self.dict_long[timestamp_beging] = SingleCombinedLog(
-                            signal, df_predict
-                        )
-                    elif signal["direction"] == "short":
-                        self.dict_short[timestamp_beging] = SingleCombinedLog(
-                            signal, df_predict
-                        )
+                else:
+                    signal = lst_signal_nn_long_two[0]
+                    self.dict_nn_long_two[timestamp_beging] = NNLongTwoLog(
+                        signal, df_predict
+                    )
+                # lst_signal_nn_short_two
+                if len(lst_signal_nn_short_two) == 0:
+                    self.dict_nn_short_two[timestamp_beging] = NNLongTwoLog(
+                        None, df_predict
+                    )
+                else:
+                    signal = lst_signal_nn_short_two[0]
+                    self.dict_nn_short_two[timestamp_beging] = NNLongTwoLog(
+                        signal, df_predict
+                    )
