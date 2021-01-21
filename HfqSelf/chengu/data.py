@@ -4,6 +4,7 @@ import os
 import torch
 from peewee import *
 from joblib import Parallel, delayed
+from sklearn.pipeline import Pipeline
 
 
 class RawData:
@@ -33,8 +34,17 @@ class RawData:
         )
         return self.basic_processed_data_lst
 
+    # 先基础数据预处理，再添加label，后做特征工程
     @staticmethod
-    def basic_process_data_utils(data):
+    def construct_label_utils(data_basic_processed, transformer_y_pipeline: Pipeline):
+        pass
+
+    @staticmethod
+    def add_features_utils(data_basic_processed, transformer_x_pipeline: Pipeline):
+        pass
+
+    @staticmethod
+    def basic_process_data_utils(data_raw):
         keep_columns = [
             "datetime",
             "last_price",
@@ -43,9 +53,10 @@ class RawData:
             "bid_volume_1",
             "ask_price_1",
             "ask_volume_1",
+            "open_interest",
         ]
-        data = data[keep_columns]
-        return data
+        data_raw = data_raw[keep_columns]
+        return data_raw
 
     @staticmethod
     def fetch_data_utils(file_path, symbol, trade_date):
