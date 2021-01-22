@@ -34,6 +34,21 @@ class RawData:
         )
         return self.basic_processed_data_lst
 
+
+
+    def process_resample(self, n_job):
+        pass
+
+
+    @staticmethod
+    def process_resample_utils(frequency):
+        
+
+
+
+
+
+
     # 先基础数据预处理，再添加label，后做特征工程
     @staticmethod
     def construct_label_utils(data_basic_processed, transformer_y_pipeline: Pipeline):

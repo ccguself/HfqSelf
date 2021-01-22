@@ -91,6 +91,7 @@ class GetLabel(BaseEstimator, TransformerMixin):
         # 保留需要使用的列
         keep_columns = ["datetime", "mid_price"]
         label_df = label_df[keep_columns]
+        return label_df
 
     @staticmethod
     def mark_price_limits(x):
