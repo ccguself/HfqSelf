@@ -9,3 +9,4 @@ class FactorData:
         self.raw_data = raw_data
     
     
+    

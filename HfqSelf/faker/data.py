@@ -5,6 +5,7 @@ import torch
 from peewee import *
 from joblib import Parallel, delayed
 from sklearn.pipeline import Pipeline
+from .config import data_config
 
 
 def classify_trade_type(x):
@@ -63,11 +64,28 @@ class RawData:
             for raw_data in self.raw_data_lst
         )
         return self.basic_processed_data_lst
-    
-    def generate_predict_timestamp(self, mode="simple"):
-        if mode == "simple":
-            
 
+    def generate_predict_timestamp(self, config=data_config):
+        if config["sample_mode"] == "time":
+
+            return
+        elif config["sample_mode"] == "tick":
+            return
+
+    @staticmethod
+    def generate_predict_timestamp_utils(
+        self,
+        mode="time",
+    ):
+        """生成观测时间戳，使用这些时间戳，分别生成对应的特征（过去）和标签（未来）
+
+        Args:
+            mode (str, optional): . Defaults to "time".
+        """
+        if mode == "time":
+            return
+        elif mode == "tick":
+            return
 
     @staticmethod
     def fetch_data_utils(file_path, symbol, trade_date):
