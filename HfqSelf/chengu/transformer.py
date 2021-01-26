@@ -81,6 +81,7 @@ class GetLabel(BaseEstimator, TransformerMixin):
         return self  # nothing else to do
 
     def transform(self, X):
+        # step1. 完成计算（列值）
         label_df = X.copy()
         label_df["mid_price"] = (label_df["bid_price_1"] + label_df["ask_price_1"]) / 2
         label_df["delta_volume"] = label_df["volume"].diff(1).fillna(0)
@@ -92,6 +93,10 @@ class GetLabel(BaseEstimator, TransformerMixin):
         # 保留需要使用的列
         keep_columns = ["datetime", "mid_price"]
         label_df = label_df[keep_columns]
+
+        # step2. 根据default_config完成shift
+
+        # step3. set_index为后面的降采样做准备
         return label_df
 
     @staticmethod
@@ -129,21 +134,42 @@ class SliceData(BaseEstimator, TransformerMixin):
         return self  # nothing else to do
 
     def transform(self, X):
+        X_tensor = torch.from_numpy(X.values)
         if self.user_defined_config["slice_overlap"] == False:
             remainder = X.shape[0] % self.user_defined_config["size_train"]
-            X_array = torch.from_numpy(X.values)
-            input_array = X_array[
+            input_tensor = X_tensor[
                 (self.user_defined_config["size_train"] + remainder) :, :
             ]
-            return input_array.view(
-                -1, self.user_defined_config["size_train"], input_array.shape[1]
+            return input_tensor.view(
+                -1, self.user_defined_config["size_train"], input_tensor.shape[1]
             )
         else:
-            for i in range(0, X.shape[0], self.user_defined_config["size_step_increment"]):
-                
+            input_tensor = torch.zero(
+                self.user_defined_config["size_train"], X.shape[1]
+            )
+            for i in range(
+                0,
+                X.shape[0] - self.user_defined_config["size_train"],
+                self.user_defined_config["size_step_increment"],
+            ):
+                temp_tensor = X.iloc[
+                    i : i + self.user_defined_config["size_train"],
+                ]
+                input_tensor = torch.stack((input_tensor, temp_tensor), 0)
+
+            return input_tensor
 
 
-resample_dict = {
+resample_feature_dict = {
+    "last_price": "last",
+    "volume": "last",
+    "bid_price_1": "last",
+    "bid_volume_1": "last",
+    "ask_price_1": "last",
+    "ask_volume_1": "last",
+}
+
+resample_label_dict = {
     "last_price": "last",
     "volume": "last",
     "bid_price_1": "last",

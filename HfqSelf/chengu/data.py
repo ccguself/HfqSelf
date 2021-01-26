@@ -5,8 +5,8 @@ import torch
 from peewee import *
 from joblib import Parallel, delayed
 from sklearn.pipeline import Pipeline
-from .transformer import resample_dict
-from .default_config import default_config
+from chengu.transformer import *
+from chengu.default_config import default_config
 
 
 class RawData:
@@ -36,7 +36,21 @@ class RawData:
         )
         return self.basic_processed_data_lst
 
-    def process_resample(self, n_job):
+    def add_features(self, n_job):
+        self.featured_data_lst = Parallel(n_jobs=n_job)(
+            delayed(self.add_features_utils)(basic_processed_data)
+            for basic_processed_data in self.basic_processed_data_lst
+        )
+        return self.featured_data_lst
+
+    def process_resample_feature(self, n_job):
+        self.resampled_feature_data_lst = Parallel(n_jobs=n_job)(
+            delayed(self.process_resample_feature_utils)(featured_data)
+            for featured_data in self.featured_data_lst
+        )
+        return self.resampled_feature_data_lst
+
+    def process_resample_label(self, n_job):
         pass
 
     @staticmethod
@@ -60,21 +74,33 @@ class RawData:
     # 该函数既用于完成特征构建后X的降采样，也用于完成label构建后Y（都保留last）的降采样
     # 目的是，保证X和Y的index对齐
     @staticmethod
-    def process_resample_feature_utils(data_featured, transformer_resample):
-        pass
+    def process_resample_feature_utils(
+        data_featured, transformer_resample=resample_feature_dict
+    ):
+        resample_transformer = Resample(
+            user_defined_config=default_config, how_dict=transformer_resample
+        )
+        data_feature_resampled = resample_transformer.transform(data_featured)
+        return data_feature_resampled
 
     @staticmethod
-    def process_resample_label_utils(data_constructed_label, transformer_resample):
-        pass
+    def process_resample_label_utils(
+        data_constructed_label, transformer_resample=resample_label_dict
+    ):
+        resample_transformer = Resample(
+            user_defined_config=default_config, how_dict=transformer_resample
+        )
+        data_feature_resampled = resample_transformer.transform(data_featured)
+        return data_feature_resampled
 
     # 先基础数据预处理，再添加label，后做特征工程
     @staticmethod
     def construct_label_utils(data_basic_processed, transformer_y_pipeline: Pipeline):
-        pass
+        return
 
     @staticmethod
     def add_features_utils(data_basic_processed, transformer_x_pipeline: Pipeline):
-        pass
+        return
 
     @staticmethod
     def basic_process_data_utils(data_raw):
