@@ -5,6 +5,8 @@ import torch
 from peewee import *
 from joblib import Parallel, delayed
 from sklearn.pipeline import Pipeline
+from .transformer import resample_dict
+from .default_config import default_config
 
 
 class RawData:
@@ -34,20 +36,36 @@ class RawData:
         )
         return self.basic_processed_data_lst
 
-
-
     def process_resample(self, n_job):
         pass
 
+    @staticmethod
+    def screen_feature(data_resampled, train_window_size):
+        # 同时完成横向和纵向的筛选：纵向指降采样后的逐一划数据 + 横向指确定使用的特征
+        # 此处需要插入特征筛选模块
+        # step 1. 完成特征的筛选
+
+        # step 2. 完成X的注意划分样本
+
+        # step 3. 返回np.array, shape:(n_sample, n_feature, n_timestamps)
+
+        pass
 
     @staticmethod
-    def process_resample_utils(frequency):
-        
+    def screen_label(data_constructed_label):
+        # 完成使用标签的指定，以及逐一划分样本
 
+        pass
 
+    # 该函数既用于完成特征构建后X的降采样，也用于完成label构建后Y（都保留last）的降采样
+    # 目的是，保证X和Y的index对齐
+    @staticmethod
+    def process_resample_feature_utils(data_featured, transformer_resample):
+        pass
 
-
-
+    @staticmethod
+    def process_resample_label_utils(data_constructed_label, transformer_resample):
+        pass
 
     # 先基础数据预处理，再添加label，后做特征工程
     @staticmethod

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import torch
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -101,6 +102,24 @@ class GetLabel(BaseEstimator, TransformerMixin):
             return x["mid_price"]
 
 
+class Resample(BaseEstimator, TransformerMixin):
+    def __init__(self, user_defined_config, how_dict):
+        self.user_defined_config = user_defined_config
+        self.how_dict = how_dict
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X_resampled = X.resample(
+            rule=self.user_defined_config["size_resample"],
+            label="right",
+            closed="right",
+        ).agg(self.how_dict)
+        X_resampled = X_resampled.dropna(how="any")
+        return X_resampled
+
+
 # 将标准化，归一化，去极值等操作，分为算子计算和处理两个部分
 class SliceData(BaseEstimator, TransformerMixin):
     def __init__(self, user_defined_config):
@@ -110,4 +129,25 @@ class SliceData(BaseEstimator, TransformerMixin):
         return self  # nothing else to do
 
     def transform(self, X):
-        pass
+        if self.user_defined_config["slice_overlap"] == False:
+            remainder = X.shape[0] % self.user_defined_config["size_train"]
+            X_array = torch.from_numpy(X.values)
+            input_array = X_array[
+                (self.user_defined_config["size_train"] + remainder) :, :
+            ]
+            return input_array.view(
+                -1, self.user_defined_config["size_train"], input_array.shape[1]
+            )
+        else:
+            for i in range(0, X.shape[0], self.user_defined_config["size_step_increment"]):
+                
+
+
+resample_dict = {
+    "last_price": "last",
+    "volume": "last",
+    "bid_price_1": "last",
+    "bid_volume_1": "last",
+    "ask_price_1": "last",
+    "ask_volume_1": "last",
+}
