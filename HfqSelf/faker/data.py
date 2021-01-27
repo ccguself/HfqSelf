@@ -125,3 +125,11 @@ class RawData:
             for data_basic_processed in self.basic_processed_data_lst
         )
         return self.datetime_sampled_series_lst
+
+    def load_factor_bank(self, n_job)
+        def load_factor_bank_utils(
+            data_basic_processed, pipeline_add_factors: Pipeline
+        ):
+            return data_feature_added
+
+        return
