@@ -18,32 +18,39 @@ class ModelInfo:
 
 
 class DailyLog:
-    def __init__(self, date, market_data, signal_timestamp_lst, signal_duration):
+    def __init__(self, date, market_data, signal_lst, signal_duration):
         self.date = date
         self.market_data = market_data
-        self.signal_timestamp_lst = signal_timestamp_lst
+        self.signal_lst = signal_lst
         self._cal_profit()
         self._cal_acc()
         self._cal_reacall()
 
     def _cal_profit(self):
-        def _cal_profit_utils():
-            # 添加设置滑点的参数
+        def _cal_profit_utils(signal, mode="active"):
+            """计算单个信号的收益情况
+
+            Args:
+                signal (dict): {"direction":"long", "datetime":datetime.datime}
+                mode (str, optional): active or passive(主买主卖/被动挂单). Defaults to "active".
+            """
+            if mode == "passive":
+                return
             return
 
         return
 
-    def _cal_acc(self):
-        def _cal_acc_utils():
-            return
+    # def _cal_acc(self):
+    #     def _cal_acc_utils():
+    #         return
 
-        return
+    #     return
 
-    def _cal_reacall(self):
-        def _cal_recall_utils():
-            return
+    # def _cal_reacall(self):
+    #     def _cal_recall_utils():
+    #         return
 
-        return
+    #     return
 
 
 class MarketData:
@@ -60,7 +67,8 @@ class MarketData:
                 os.listdir(self.path_data),
             )
         )
-        self.file_paths.extend([os.path.join(self.path_data, name) for name in names])
+        self.file_paths.extend(
+            [os.path.join(self.path_data, name) for name in names])
         self.file_paths.sort()
 
     # 只获取信号的时间戳
