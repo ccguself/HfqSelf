@@ -34,8 +34,12 @@ class DailyLog:
                 signal (dict): {"direction":"long", "datetime":datetime.datime}
                 mode (str, optional): active or passive(主买主卖/被动挂单). Defaults to "active".
             """
-            if mode == "passive":
-                return
+
+            # step1. 首先截取信号有效区间的行情
+
+            # step2. 根据不同的模式，对信号的收益进行判断
+
+            # step3.
             return
 
         return
@@ -78,6 +82,10 @@ class MarketData:
         ) -> DailyLog:
             daily_date = daily_file_path.split(".")[0][-8:]  # 截取日期
             daily_market_data = pd.read_csv(daily_file_path)
+
+            # 获取 需要预测的时点
+
+            # 获取 开仓信号
 
             return
 
