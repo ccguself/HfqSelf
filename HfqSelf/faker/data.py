@@ -88,7 +88,8 @@ class RawData:
             data_raw["delta_oi"] = data_raw["open_interest"].diff(1).fillna(0)
 
             # step3. 对交易类别做判断
-            data_raw["tick_trade_type"] = data_raw.apply(classify_trade_type, axis=1)
+            data_raw["tick_trade_type"] = data_raw.apply(
+                classify_trade_type, axis=1)
             trade_types_lst = ["BO", "BC", "LO", "SC", "LE", "SO", "LC", "SE"]
             for i, trade_type in enumerate(trade_types_lst):
                 data_raw[trade_type] = np.where(
@@ -104,6 +105,16 @@ class RawData:
             for data_raw in self.data_raw_lst
         )
         return self.basic_processed_data_lst
+
+    def resample(self, n_job=4):
+        def resample_utils(basic_processed_data, freq_resample):
+            how_method_dict = {}
+            resample_data = basic_processed_data.resample(
+                rule=freq_resample,
+                label="right",
+                closed="right",
+            ).agg(how_method_dict)
+            resample_data = resample_data.dropna(how="any")
 
     def generate_predict_timestamp(self, n_job):
         def generate_predict_timestamp_utils(data_basic_processed, config=data_config):
