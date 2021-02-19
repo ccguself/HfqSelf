@@ -16,5 +16,5 @@ data_config = {
 #         date_yesterday = date_today - datetime.timedelta(days=1)
 
 #         interval_trading_1 = Interval()
-interval_trading_lst =   # 用于盘间的休市时间判断
-interval_break =   # 用于夜盘和日盘间的判断
+# interval_trading_lst =   # 用于盘间的休市时间判断
+# interval_break =   # 用于夜盘和日盘间的判断
