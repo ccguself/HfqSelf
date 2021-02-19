@@ -7,6 +7,12 @@ from joblib import Parallel, delayed
 from sklearn.pipeline import Pipeline
 from config import data_config
 
+# step1. 读取数据
+# step2. 数据基础操作（交易属性添加， Mid-price添加）
+# step3. 标签label添加
+# step4. 特征factor添加
+# step5. 降采样
+
 
 class RawData:
     def __init__(
@@ -106,33 +112,48 @@ class RawData:
         )
         return self.basic_processed_data_lst
 
+    def load_label_zoo(self, n_job=4):
+        def load_label_zoo_utils(basic_processed_data, label_pipeline: Pipeline):
+            return
+        return
+
+    def load_factor_zoo(self, n_job=4):
+        def load_factor_zoo_utils(load_label_data, factor_pipeline: Pipeline):
+            return
+        return
+
     def resample(self, n_job=4):
-        def resample_utils(basic_processed_data, freq_resample):
+        def resample_utils(load_label_factor_data, freq_resample):
             how_method_dict = {}
-            resample_data = basic_processed_data.resample(
+            resample_data = load_label_factor_data.resample(
                 rule=freq_resample,
                 label="right",
                 closed="right",
             ).agg(how_method_dict)
             resample_data = resample_data.dropna(how="any")
-
-    def generate_predict_timestamp(self, n_job):
-        def generate_predict_timestamp_utils(data_basic_processed, config=data_config):
-            if config["sample_mode"] == "tick":
-                datetime_all = data_basic_processed["datetime"]
-                tick_begin = config["window_train_minute"] * 60 * 2
-                index_sampled = range(
-                    tick_begin,
-                    datetime_all.shape[0],
-                    config["window_sample_second"] * 2,
-                )
-                datetime_sampled_series = data_basic_processed["datetime"].iloc[
-                    index_sampled
-                ]
-            return datetime_sampled_series
-
-        self.datetime_sampled_series_lst = Parallel(n_jobs=n_job)(
-            delayed(generate_predict_timestamp_utils)(data_basic_processed)
-            for data_basic_processed in self.basic_processed_data_lst
+        self.resampled_data_lst = Parallel(n_jobs=n_job)(
+            delayed(resample_utils)(load_label_factor_data)
+            for load_label_factor_data in self.load_label_factor_data_lst
         )
-        return self.datetime_sampled_series_lst
+        return self.resampled_data_lst
+
+    # def generate_predict_timestamp(self, n_job):
+    #     def generate_predict_timestamp_utils(data_basic_processed, config=data_config):
+    #         if config["sample_mode"] == "tick":
+    #             datetime_all = data_basic_processed["datetime"]
+    #             tick_begin = config["window_train_minute"] * 60 * 2
+    #             index_sampled = range(
+    #                 tick_begin,
+    #                 datetime_all.shape[0],
+    #                 config["window_sample_second"] * 2,
+    #             )
+    #             datetime_sampled_series = data_basic_processed["datetime"].iloc[
+    #                 index_sampled
+    #             ]
+    #         return datetime_sampled_series
+
+    #     self.datetime_sampled_series_lst = Parallel(n_jobs=n_job)(
+    #         delayed(generate_predict_timestamp_utils)(data_basic_processed)
+    #         for data_basic_processed in self.basic_processed_data_lst
+    #     )
+    #     return self.datetime_sampled_series_lst
