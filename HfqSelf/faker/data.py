@@ -101,6 +101,18 @@ class RawData:
                 data_raw[trade_type] = np.where(
                     data_raw["tick_trade_type"] == trade_type, data_raw["delta_oi"], 0
                 )
+
+            # 4. 预留特征
+            data_raw["IntervalOpenPx"] = data_raw["LastPx"]
+            data_raw["IntervalClosePx"] = data_raw["LastPx"]
+            data_raw["IntervalHighPx"] = data_raw["LastPx"]
+            data_raw["IntervalLowPx"] = data_raw["LastPx"]
+
+            data_raw["Buy1PriceRolling"] = data_raw["Buy1Price"]
+            data_raw["Sell1PriceRolling"] = data_raw["Sell1Price"]
+            data_raw["Buy1OrderQtyRolling"] = data_raw["Buy1OrderQty"]
+            data_raw["Sell1OrderQtyRolling"] = data_raw["Sell1OrderQty"]
+
             # 只保留需要使用的列
             drop_columns = ["tick_trade_type", "volume", "open_interest"]
             return data_raw.drop(drop_columns, axis=1)
@@ -124,7 +136,29 @@ class RawData:
 
     def resample(self, n_job=4):
         def resample_utils(load_label_factor_data, freq_resample):
-            how_method_dict = {}
+            how_method_dict = {
+                "delta_volume": "sum",
+                "delta_oi": "sum",
+                "MDDate": "last",
+                "MDTime": "last",
+                "LastPx": "last",
+                "MidPrice": "last",
+                "IntervalOpenPx": "first",
+                "IntervalClosePx": "last",
+                "IntervalHighPx": "max",
+                "IntervalLowPx": "min",
+                "Buy1PriceRolling": list,
+                "Sell1PriceRolling": list,
+                "Buy1OrderQtyRolling": list,
+                "Sell1OrderQtyRolling": list,
+                "BO": "sum",
+                "BC": "sum",
+                "LO": "sum",
+                "SC": "sum",
+                "LE": "sum",
+                "SO": "sum",
+                "LC": "sum",
+                "SE": "sum"}
             resample_data = load_label_factor_data.resample(
                 rule=freq_resample,
                 label="right",
