@@ -24,6 +24,14 @@ class GetLabel(BaseEstimator, TransformerMixin):
             label_dict["label_midprice_pct"] = df_interval["mid_price"].iloc[-1] / \
                 df_interval["mid_price"].iloc[0]
 
+            # label_2 : …………
+
+            # label_3 : …………
+
+            # label_4 : …………
+
+            # label_5 : …………
+
             return label_dict
 
         label_dict_lst = Parallel(n_jobs=self.n_job)(
@@ -31,5 +39,7 @@ class GetLabel(BaseEstimator, TransformerMixin):
                 time_index, self.data_config["window_predict_minute"], X)
             for time_index in list(X.index)
         )
-
+        key_name_lst = list(label_dict_lst[0].keys())
+        for key_name in key_name_lst:
+            X[key_name] = [x[key_name] for x in label_dict_lst]
         return X
